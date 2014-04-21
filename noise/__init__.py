@@ -5,27 +5,13 @@ import shutil
 import jinja2
 
 from .page import Page
+from .config import Config
 from .hooks import autoindex, sitemap
 from .boilerplate import BOILERPLATE_INIT, BOILERPLATE_CONFIG
 
 
-class Config(dict):
-    def __init__(self, path, config={}):
-        self.path = path
-        dict.update(self, **config)
-
-    def __setitem__(self, key, value):
-        dict.__setitem__(self, key, value)
-        self.update()
-
-    def update(self, *args, **kwargs):
-        for k, v in dict(*args, **kwargs).iteritems():
-            self[k] = v
-        with open(self.path, 'w') as f:
-            f.write(json.dumps(self, sort_keys=True, indent=4, separators=(',', ': ')))
-
-
 class Noise(object):
+    files = []
     hooks  = []
     routes = {}
 
@@ -90,15 +76,27 @@ class Noise(object):
 
     @config.setter
     def config(self, config):
-        self._config = config
         config.update()
+        self._config = config
 
     def route(self, route):
         def decorator(callback):
-            # add route
-            self.routes[self.__format_route(route)] = callback
+            self.add_route(route, callback)
             return callback
         return decorator
+
+    def add_route(self, route, callback):
+        # append formatted route (overwriting is intentional)
+        self.routes[self.__format_route(route)] = callback
+
+    def add_file(self, path):
+        # ensure build path
+        path = os.path.join(self.build_path, path)
+        # determine relative path
+        path = os.path.relpath(path, self.build_path)
+        # append file if needed
+        if path not in self.files:
+            self.files.append(path)
 
     def init(self, config=None):
         # determine project init path
@@ -127,7 +125,15 @@ class Noise(object):
         # perform render
         self._render()
 
+    def _prepare(self):
+        # iterate build hooks
+        for hook in self.hooks:
+            # call hook
+            hook.prepare()
+
     def _prerender(self):
+        # perform preperations
+        self._prepare()
         # iterate build files
         for root, dirs, files in os.walk(self.build_path):
             # iterate build hooks
@@ -168,6 +174,14 @@ class Noise(object):
             for hook in self.hooks:
                 # pass data to hook
                 hook.postrender(root, dirs, files)
+        # perform completion
+        self._complete()
+
+    def _complete(self):
+        # iterate build hooks
+        for hook in self.hooks:
+            # call hook
+            hook.complete()
 
 
 def main():
