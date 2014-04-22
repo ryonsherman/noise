@@ -50,7 +50,6 @@ class autoindex(RenderedFileHook):
         # add route
         self.app.add_route(route, Page(self.app, file_path, '_index.html'))
 
-
 class sitemap(RenderedFileHook):
     def __init__(self, app, file_name='sitemap.xml'):
         RenderedFileHook.__init__(self, app, file_name)
@@ -127,9 +126,7 @@ class manifest(RenderedFileHook):
 
 
 class zipball(RenderedFileHook):
-    def __init__(self, app, file_name=None):
-        # dynamically create file name if none provided
-        file_name = file_name or 'archive_{}.zip'.format(time.strftime("%Y-%m-%d", time.gmtime()))
+    def __init__(self, app, file_name='archive.zip'):
         RenderedFileHook.__init__(self, app, file_name)
 
     def prepare(self):
@@ -153,9 +150,7 @@ class zipball(RenderedFileHook):
         self.zipfile.close()
 
 class tarball(RenderedFileHook):
-    def __init__(self, app, file_name=None):
-        # dynamically create file name if none provided
-        file_name = file_name or 'archive_{}.tar.gz'.format(time.strftime("%Y-%m-%d", time.gmtime()))
+    def __init__(self, app, file_name='archive.tar.gz'):
         RenderedFileHook.__init__(self, app, file_name)
 
     def prepare(self):

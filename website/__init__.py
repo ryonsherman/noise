@@ -1,10 +1,12 @@
 #!/usr/bin/env python2
 import os
+import markdown
 import subprocess
 
 from noise import Noise
 from noise.hooks import RenderedFileHook, zipball, tarball, manifest
 
+markdowner = markdown.Markdown(extensions=['toc', 'abbr', 'tables'])
 
 class sitetree(RenderedFileHook):
     def __init__(self, app, file_name='sitemap.txt'):
@@ -23,15 +25,35 @@ class sitetree(RenderedFileHook):
         with open(self.file_path, 'w') as f:
             f.write(output)
 
+def ascii_filter(s):
+    return ''.join(map(lambda x: '&#{};'.format(ord(x)), s))
+
+def markdown_filter(s):
+    return markdowner.convert(s).strip()
+
+
 app = Noise(__name__)
-app.hooks += [zipball(app), tarball(app), sitetree(app), manifest(app)]
+app.hooks += [
+    zipball(app, 'etc/archive/archive.zip'),
+    tarball(app, 'etc/archive/archive.tar.gz'),
+    sitetree(app, 'etc/sitemap/sitemap.txt'),
+    manifest(app)
+]
 
-# modify hook file paths
-for hook in filter(lambda x: type(x) in [zipball, tarball], app.hooks):
-    hook_file_path = os.path.relpath(hook.file_path, app.build_path)
-    hook.file_path = os.path.join(app.build_path, 'etc', hook_file_path)
-    app.files.remove(hook_file_path)
+def markdown_toc(f):
+    file_path = os.path.join(app.template_path, f)
+    with open(file_path) as f:
+        markup = f.read()
+    markdowner.convert(markup)
+    return markdowner.toc.strip()
 
-@app.route('/blog.html')
+app.jinja.globals['toc'] = markdown_toc
+app.jinja.filters.update({
+    'ascii': ascii_filter,
+    'markdown': markdown_filter
+})
+
+
+@app.route('/')
 def index(page):
-   page.template = '_index.html'
+    pass

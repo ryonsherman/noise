@@ -1,8 +1,11 @@
 #!/usr/bin/env python2
 import os
 
+from jinja2 import Markup
 from jinja2.exceptions import TemplateNotFound
-from noise.boilerplate import BOILERPLATE_TEMPLATE
+from docutils.core import publish_string
+
+from .boilerplate import BOILERPLATE_TEMPLATE
 
 
 class Page(object):
