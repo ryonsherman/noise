@@ -16,7 +16,7 @@ class Noise(object):
     hooks  = []
     routes = {}
 
-    def __init__(self, project, routes=None, hooks=None):
+    def __init__(self, project, routes=None):
         # set project path
         self.project_path = os.path.join(os.getcwd(), project)
         # set local paths
@@ -27,7 +27,7 @@ class Noise(object):
         # set routes
         if routes is not None: self.routes = routes
         # set build hooks
-        self.hooks = hooks or [autoindex(self), sitemap(self)]
+        self.hooks = [autoindex(self), sitemap(self)]
         # initialize template engine
         self.jinja = jinja2.Environment(loader=jinja2.FileSystemLoader(self.template_path))
 
@@ -132,6 +132,12 @@ class Noise(object):
         # create project config file if needed
         if config or not os.path.exists(self.config_path):
             self.config = Config(self.config_path, config or BOILERPLATE_CONFIG)
+        # create template directory if needed
+        if not os.path.exists(self.template_path):
+            os.mkdir(self.template_path)
+        # create static directory if needed
+        if not os.path.exists(self.static_path):
+            os.mkdir(self.static_path)
 
     def build(self):
         # clear build directory
@@ -142,6 +148,16 @@ class Noise(object):
             shutil.copytree(self.static_path, self.build_path)
         # create build directory
         else: os.mkdir(self.build_path)
+
+        # iterate files
+        for file_name in self.files:
+            # determine file _path
+            file_path = os.path.join(self.build_path, file_name)
+            # determine parent path
+            file_path = os.path.dirname(file_path)
+            # create parent path if needed
+            if not os.path.exists(file_path):
+                os.makedirs(file_path)
 
         # perform render
         self._render()
