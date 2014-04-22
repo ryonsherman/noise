@@ -37,7 +37,7 @@ app.hooks += [
     zipball(app, 'etc/archive/archive.zip'),
     tarball(app, 'etc/archive/archive.tar.gz'),
     sitetree(app, 'etc/sitemap/sitemap.txt'),
-    manifest(app, 'etc/manifest.txt')
+    manifest(app)
 ]
 
 def markdown_toc(f):
