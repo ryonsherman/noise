@@ -4,6 +4,7 @@ import os
 from jinja2.exceptions import TemplateNotFound
 from noise.boilerplate import BOILERPLATE_TEMPLATE
 
+
 class Page(object):
     data = {}
     template = ''
@@ -18,19 +19,26 @@ class Page(object):
 
     def __listdir(self, path):
         root_path = '/' + os.path.relpath(path, self.app.build_path).lstrip('.')
+        if root_path != '/': root_path += '/'
         for root, dirs, files in os.walk(path):
-            return (root_path + '/', [f + '/' for f in sorted(dirs)] + sorted(files))
+            mtime = {}
+            index = [f + '/' for f in sorted(dirs)] + sorted(files)
+            for file_name in index:
+                file_path = os.path.join(self.app.build_path, file_name)
+                if not os.path.exists(file_path): file_path = '.'
+                mtime[file_name] = self.app._get_file_mtime(file_path, '%Y-%m-%d %H:%M:%S UTC')
+            return {'pwd': root_path, 'dir': index, 'mtime': mtime}
 
     def _index(self, path):
         # determine file path
         file_path = os.path.dirname(path)
         # get current directory index
-        current, previous = self.__listdir(file_path), ()
+        index = {'.': self.__listdir(file_path)}
         # get previous directory index if not in build root
         if file_path != self.app.build_path:
-            previous = self.__listdir(os.path.dirname(file_path))
+            index['..'] = self.__listdir(os.path.dirname(file_path))
         # return directory indices
-        return (current, previous)
+        return index
 
     def render(self):
         # determine file _path

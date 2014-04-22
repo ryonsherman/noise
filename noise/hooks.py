@@ -6,7 +6,7 @@ import hashlib
 from xml.dom import minidom
 from xml.etree import ElementTree as xml
 
-from noise.page import Page
+from .page import Page
 
 
 class Hook(object):
@@ -17,7 +17,7 @@ class Hook(object):
     def prerender(self, root, dirs, files): pass
     def render(self, route, page): pass
     def postrender(self, root, dirs, files): pass
-    def complete(self):pass
+    def complete(self): pass
 
 
 class RenderedFileHook(Hook):
@@ -70,13 +70,9 @@ class sitemap(RenderedFileHook):
 
             # determine file path relative to build path
             file_path = os.path.relpath(os.path.join(root, file_name), self.app.build_path)
-            # determine static path
-            static_path = os.path.join(file_path, self.app.static_path)
 
-            # attempt to get static file modification time
-            mtime = os.path.getmtime(static_path if os.path.exists(static_path) else file_path)
-            # format time
-            timestamp = time.strftime('%Y-%m-%d', time.gmtime(mtime))
+            # get timestamp
+            timestamp = self.app._get_file_mtime(file_path, '%Y-%m-%d')
 
             # append element to dom
             xml.SubElement(self.dom, 'loc').text = self.app.config['base'] + file_path
@@ -106,15 +102,9 @@ class manifest(RenderedFileHook):
             file_path = os.path.join(root, file_name)
             # continue if file is manifest
             if file_path == self.file_path: continue
-            # determine file path relative to build path
-            relative_path = os.path.relpath(file_path, self.app.build_path)
-            # determine relative static path
-            static_path = os.path.join(self.app.static_path, relative_path)
 
-            # attempt to get static file modification time
-            mtime = os.path.getmtime(static_path if os.path.exists(static_path) else file_path)
-            # format time
-            timestamp = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(mtime))
+            # get timestamp
+            timestamp = self.app._get_file_mtime(file_path)
 
             # initialize hasher
             hasher = hashlib.sha512()
@@ -125,6 +115,16 @@ class manifest(RenderedFileHook):
             # determine hashum
             hashsum = hasher.hexdigest()
 
+            # determine file path relative to build path
+            relative_path = os.path.relpath(file_path, self.app.build_path)
+
             # write manifest to file
             with open(self.file_path, 'a') as f:
                 f.write(" ".join([timestamp, hashsum, "/" + relative_path]) + "\n")
+
+
+class zipball(RenderedFileHook):
+    def __init__(self, app, file_name='manifest.txt'):
+        RenderedFileHook.__init__(self, app, file_name)
+
+    # def postrender(self, root, dirs, files):

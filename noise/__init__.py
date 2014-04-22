@@ -1,5 +1,6 @@
 #!/usr/bin/env python2
 import os
+import time
 import json
 import shutil
 import jinja2
@@ -52,6 +53,26 @@ class Noise(object):
             route += ".html"
         # return formatted route
         return route
+
+    def _get_file(self, path):
+        # determine file path
+        path = os.path.join(self.build_path, path)
+        # determine file path relative to build path
+        file_path = os.path.relpath(path, self.build_path)
+        # determine relative static path
+        static_path = os.path.join(self.static_path, file_path)
+        # return static path or build path
+        return static_path if os.path.exists(static_path) else path
+
+    def _get_file_mtime(self, path, _format='%Y-%m-%dT%H:%M:%SZ'):
+        # attempt to get static file modification time
+        mtime = os.path.getmtime(self._get_file(path))
+        # return formatted time
+        return time.strftime(_format, time.gmtime(mtime))
+
+    def _get_file_size(self, path):
+        # return file size
+        return os.path.getsize(self._get_file(path))
 
     @property
     def config(self):

@@ -19,23 +19,30 @@ def index(page):
 
 BOILERPLATE_TEMPLATE = \
 """
+{%- set title = "Index of " + index['.']['pwd'] -%}
 <!DOCTYPE html>
 <html>
-  <body>
-    {%- macro listdir(index) -%}
-      {%- set pwd  = index[0] -%}
-      {%- set dirs = index[1] -%}
-      <ul>
-        <a href="{{ config['base'] + pwd.lstrip('/') }}">~/{{ pwd.strip('/') }}</a>
-        {% for dir in dirs -%}
-          <li><a href="{{ config['base'] + pwd.lstrip('/') + dir }}">{{ dir }}</a></li>
-        {% endfor -%}
-      </ul>
-    {%- endmacro %}
-    {{ listdir(index[0]) }}
-    {% if index[1] -%}
-      {{ listdir(index[1]) }}
-    {% endif -%}
+  <head>
+    <meta charset="utf-8">
+    <title>{{ title }}</title>
+    <base href="{{ config['base'] }}"/>
+  </head>
+  <body bgcolor="white">
+    <h1>{{ title }}</h1>
+    <hr>
+    <pre>
+<a href="{{ index['.']['pwd'].lstrip('/') }}">./</a>
+{% if index.get('..', False) -%}
+<a href="{{ index['..']['pwd'].lstrip('/') }}">../</a>
+{% else -%}
+<a href="{{ index['.']['pwd'].lstrip('/') }}">../</a>
+{% endif -%}
+{% for fname in index['.']['dir'] -%}
+<a href="{{ index['.']['pwd'].lstrip('/') + fname }}">{{ fname }}</a>
+{{- index['.']['mtime'][fname].rjust(100 - fname|length) }}
+{% endfor -%}
+    </pre>
+    <hr>
   </body>
 </html>
 """.lstrip()
