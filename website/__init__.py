@@ -3,7 +3,7 @@ import os
 import subprocess
 
 from noise import Noise
-from noise.hooks import RenderedFileHook, manifest
+from noise.hooks import RenderedFileHook, zipball, tarball, manifest
 
 
 class sitetree(RenderedFileHook):
@@ -11,8 +11,10 @@ class sitetree(RenderedFileHook):
         RenderedFileHook.__init__(self, app, file_name)
 
     def complete(self):
+        # determine command
+        command = ['tree', '-Fn', '--charset=ASCII', self.app.build_path + "/"]
         # create process
-        process = subprocess.Popen(['tree', '-Fn', '--charset=ASCII', self.app.build_path + "/"], stdout=subprocess.PIPE)
+        process = subprocess.Popen(command, stdout=subprocess.PIPE)
         # execute process and format output
         output = unicode(process.communicate()[0]).strip()
         # replace first line with 'root' placeholder
@@ -22,7 +24,13 @@ class sitetree(RenderedFileHook):
             f.write(output)
 
 app = Noise(__name__)
-app.hooks += [manifest(app), sitetree(app)]
+app.hooks += [zipball(app), tarball(app), sitetree(app), manifest(app)]
+
+# modify hook file paths
+for hook in filter(lambda x: type(x) in [zipball, tarball], app.hooks):
+    hook_file_path = os.path.relpath(hook.file_path, app.build_path)
+    hook.file_path = os.path.join(app.build_path, 'etc', hook_file_path)
+    app.files.remove(hook_file_path)
 
 @app.route('/blog.html')
 def index(page):

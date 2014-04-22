@@ -215,14 +215,18 @@ def main():
     # parse arguments
     args = parser.parse_args()
 
-    # project directory
-    project = args.project
+    # determine project name
+    project_name = os.path.basename(args.project)
+    # determine project path
+    project_path = os.path.dirname(args.project)
+    # change to project directory
+    if project_path: os.chdir(project_path)
     # initialize project
     if args.action == 'init':
-        Noise(project).init()
+        Noise(project_name).init()
     # import and build project
     elif args.action == 'build':
-        __import__(project).app.build()
+        __import__(project_name).app.build()
     # print script usage
     else:
         parser.print_usage()

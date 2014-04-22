@@ -1,6 +1,9 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 import os
 import time
+import zipfile
+import tarfile
 import hashlib
 
 from xml.dom import minidom
@@ -124,7 +127,53 @@ class manifest(RenderedFileHook):
 
 
 class zipball(RenderedFileHook):
-    def __init__(self, app, file_name='manifest.txt'):
+    def __init__(self, app, file_name=None):
+        # dynamically create file name if none provided
+        file_name = file_name or 'archive_{}.zip'.format(time.strftime("%Y-%m-%d", time.gmtime()))
         RenderedFileHook.__init__(self, app, file_name)
 
-    # def postrender(self, root, dirs, files):
+    def prepare(self):
+        # create zip file
+        self.zipfile = zipfile.ZipFile(self.file_path, 'w')
+
+    def complete(self):
+        # iterate build files
+        for root, dirs, files in os.walk(self.app.build_path):
+            # iterate files in each dir
+            for file_name in files:
+                # determine file path
+                file_path = os.path.join(root, file_name)
+                # continue if current file
+                if file_path == self.file_path: continue
+                # determine relative file name
+                file_name = os.path.relpath(file_path, self.app.build_path)
+                # add file to zip file
+                self.zipfile.write(file_path, file_name, compress_type=zipfile.ZIP_DEFLATED)
+        # close zip file
+        self.zipfile.close()
+
+class tarball(RenderedFileHook):
+    def __init__(self, app, file_name=None):
+        # dynamically create file name if none provided
+        file_name = file_name or 'archive_{}.tar.gz'.format(time.strftime("%Y-%m-%d", time.gmtime()))
+        RenderedFileHook.__init__(self, app, file_name)
+
+    def prepare(self):
+        # create tar file
+        self.tarfile = tarfile.open(self.file_path, 'w:gz')
+
+    def complete(self):
+         # iterate build files
+        for root, dirs, files in os.walk(self.app.build_path):
+            # iterate files in each dir
+            for file_name in files:
+                # determine file path
+                file_path = os.path.join(root, file_name)
+                # continue if current file
+                if file_path == self.file_path: continue
+                # determine relative file name
+                file_name = os.path.relpath(file_path, self.app.build_path)
+                # add file to tar file
+                self.tarfile.add(file_path, file_name)
+        # close tar file
+        self.tarfile.close()
