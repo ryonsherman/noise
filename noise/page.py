@@ -1,9 +1,10 @@
 #!/usr/bin/env python2
 import os
 
+from fnmatch import fnmatch
+from xml.dom import minidom
 from jinja2 import Markup
 from jinja2.exceptions import TemplateNotFound
-from docutils.core import publish_string
 
 from .boilerplate import BOILERPLATE_TEMPLATE
 
@@ -12,25 +13,43 @@ class Page(object):
     data = {}
     template = ''
 
-    def __init__(self, app, file_path, template='', data={}):
+    def __init__(self, app, file_path, template=None, data=None):
         self.app = app
-        self.data = data
-        self.template = template
+        self.data = data or {}
+        self.template = template or ''
         self.file_path = file_path
         # append to rendered files
         self.app.add_file(file_path)
 
     def __listdir(self, path):
-        root_path = '/' + os.path.relpath(path, self.app.build_path).lstrip('.')
+        # determine root path
+        root_path = '/' + self.app._rpath(path).lstrip('.')
+        # append forward-slash if needed
         if root_path != '/': root_path += '/'
+        # iterate passed path
         for root, dirs, files in os.walk(path):
+            # filter helper
+            def _filter(files):
+                # iterate ignored patterns
+                for pattern in self.app.ignored:
+                    if pattern.endswith('/'): pattern += '*'
+                    # filter files by pattern
+                    files = filter(lambda x: not fnmatch(x, pattern.lstrip('/')), files)
+                return files
+            # filter dirs
+            dirs = _filter(dirs)
+            # filter files
+            files = _filter(files)
+            # initialize mtime dict
             mtime = {}
+            # build index of sorted dirs followed by files
             index = [f + '/' for f in sorted(dirs)] + sorted(files)
+            # iterate index of files
             for file_name in index:
-                file_path = os.path.join(self.app.build_path, file_name)
-                if not os.path.exists(file_path): file_path = '.'
-                mtime[file_name] = self.app._get_file_mtime(file_path, '%Y-%m-%d %H:%M:%S UTC')
-            return {'pwd': root_path, 'dir': index, 'mtime': mtime}
+                # set mtime for file
+                mtime[file_name] = self.app._get_file_mtime(file_name, '%Y-%m-%d %H:%M:%S UTC')
+            # return dict of path, index, and mtimes
+            return {'pwd': root_path, 'dir': index, 'mtime': mtime, 'fsize': {}}
 
     def _index(self, path):
         # determine file path
@@ -44,10 +63,15 @@ class Page(object):
         return index
 
     def render(self):
-        # determine file _path
-        file_path = os.path.relpath(self.file_path, self.app.build_path)
-        # determine template path
-        template_path = os.path.join(self.app.template_path, file_path)
+        # if page has template set
+        if self.template:
+            # determine template path
+            template_path = self.app._tpath(self.template)
+        else:
+            # determine file path
+            file_path = self.app._rpath(self.file_path)
+            # determine template path
+            template_path = self.app._tpath(file_path)
         # use template if exists
         if os.path.exists(template_path):
             template = self.app.jinja.get_template(self.template)
@@ -58,23 +82,10 @@ class Page(object):
         else:
             raise TemplateNotFound(self.template)
 
-        # iterate build files
-        for file_name in self.app.files:
-            # determine file path
-            file_path = os.path.join(self.app.build_path, file_name)
-            # continue if file exists
-            if os.path.exists(file_path): continue
-            # determine parent directory
-            parent_path = os.path.dirname(file_path)
-            # create parent directory if needed
-            if not os.path.exists(parent_path):
-                os.makedirs(parent_path)
-            # touch file
-            open(file_path, 'w').close()
-
-        # set page index data
-        self.data['index'] = self._index(self.file_path)
-        # modify jinja globals
+        # set page index data if not set
+        if 'index' not in self.data:
+            self.data['index'] = self._index(self.file_path)
+        # include config in jinja globals
         self.app.jinja.globals['config'] = self.app.config
 
         # write page to file

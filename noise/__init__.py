@@ -4,6 +4,7 @@ import time
 import json
 import shutil
 import jinja2
+import fnmatch
 
 from .page import Page
 from .config import Config
@@ -13,27 +14,22 @@ from .boilerplate import BOILERPLATE_INIT, BOILERPLATE_CONFIG
 
 class Noise(object):
     files = []
-    hooks  = []
     routes = {}
 
-    def __init__(self, project, routes=None):
+    def __init__(self, project, hooks=True, ignored=['.*']):
         # set project path
         self.project_path = os.path.join(os.getcwd(), project)
         # set local paths
-        self.config_path   = self.__localpath('config.json')
-        self.static_path   = self.__localpath('static')
-        self.template_path = self.__localpath('template')
-        self.build_path    = self.__localpath('build')
-        # set routes
-        if routes is not None: self.routes = routes
+        self.config_path   = self._lpath('config.json')
+        self.static_path   = self._lpath('static')
+        self.template_path = self._lpath('template')
+        self.build_path    = self._lpath('build')
         # set build hooks
-        self.hooks = [autoindex(self), sitemap(self)]
+        self.hooks = [autoindex(self), sitemap(self)] if hooks else []
+        # set ignored files
+        self.ignored = ignored
         # initialize template engine
         self.jinja = jinja2.Environment(loader=jinja2.FileSystemLoader(self.template_path))
-
-    def __localpath(self, path):
-        # return path relative to project path
-        return os.path.join(self.project_path, path)
 
     def __format_config(self, config):
         # remove trailing forward-slash from base url
@@ -54,25 +50,64 @@ class Noise(object):
         # return formatted route
         return route
 
+    def _lpath(self, path):
+        # return local path
+        return os.path.join(self.project_path, path)
+
+    def _rpath(self, path):
+        # return relative build path
+        return os.path.relpath(path, self.build_path)
+
+    def _bpath(self, path):
+        # return build path
+        return os.path.join(self.build_path, path)
+
+    def _spath(self, path):
+        # return static path
+        return os.path.join(self.static_path, path)
+
+    def _tpath(self, path):
+        # return build path
+        return os.path.join(self.template_path, path)
+
+    def _fpath(self, path):
+        # determine static path
+        spath = self._spath(path)
+        # return static path if exists
+        if os.path.exists(spath): return spath
+        # return build path by default
+        return self._bpath(path)
+
+    def _get_hook(self, hook):
+        # filter hook by class type
+        hooks = filter(lambda x: issubclass(type(x), hook), self.hooks)
+        # return None if hook was not found
+        if not len(hooks): return None
+        # return hook(s)
+        return hooks if len(hooks) > 1 else hooks[0]
+
     def _get_file(self, path):
-        # determine file path
-        path = os.path.join(self.build_path, path)
-        # determine file path relative to build path
-        file_path = os.path.relpath(path, self.build_path)
-        # determine relative static path
-        static_path = os.path.join(self.static_path, file_path)
-        # return static path or build path
-        return static_path if os.path.exists(static_path) else path
+        # return file path
+        return self._fpath(path)
 
     def _get_file_mtime(self, path, _format='%Y-%m-%dT%H:%M:%SZ'):
+        # determine file path
+        file_path = self._fpath(path)
+        # use build path if file does not yet exist
+        if not os.path.exists(file_path): file_path = self.build_path
         # attempt to get static file modification time
-        mtime = os.path.getmtime(self._get_file(path))
+        mtime = os.path.getmtime(file_path)
         # return formatted time
         return time.strftime(_format, time.gmtime(mtime))
 
-    def _get_file_size(self, path):
-        # return file size
-        return os.path.getsize(self._get_file(path))
+    def _get_file_size(self, path, _format=False):
+        file_size = os.path.getsize(self._fpath(path))
+        if not _format: return file_size
+        for x in ['B','KB','MB','GB']:
+            if file_size < 1024.0:
+                return "%3.1f%s" % (file_size, x)
+            file_size /= 1024.0
+        return "%3.1f%s" % (file_size, 'TB')
 
     @property
     def config(self):
@@ -149,38 +184,35 @@ class Noise(object):
         # create build directory
         else: os.mkdir(self.build_path)
 
-        # iterate files
-        for file_name in self.files:
-            # determine file _path
-            file_path = os.path.join(self.build_path, file_name)
-            # determine parent path
-            file_path = os.path.dirname(file_path)
-            # create parent path if needed
-            if not os.path.exists(file_path):
-                os.makedirs(file_path)
-
         # perform render
         self._render()
 
-    def _prepare(self):
+    def _prerender(self):
         # iterate build hooks
         for hook in self.hooks:
-            # call hook
-            hook.prepare()
-
-    def _prerender(self):
-        # perform preperations
-        self._prepare()
-        # iterate build files
-        for root, dirs, files in os.walk(self.build_path):
-            # iterate build hooks
-            for hook in self.hooks:
-                # pass data to hook
-                hook.prerender(root, dirs, files)
+            # pass data to hook
+            hook.prerender()
 
     def _render(self):
+        # iterate build files
+        for root, dirs, files in os.walk(self.build_path):
+            # remove ignored file helper
+            def remove_ignored(file_name, method):
+                # iterate ignore patterns
+                for pattern in self.ignored:
+                    # continue if pattern not matched
+                    if not fnmatch.fnmatch(file_name, pattern): continue
+                    # remove ignored files
+                    method(os.path.join(root, file_name))
+            # reomve ignored files
+            map(lambda x: remove_ignored(x, os.remove), files)
+            # remove ignored dirs
+            map(lambda x: remove_ignored(x, shutil.rmtree), dirs)
+
         # perform pre-render
         self._prerender()
+        # initialize list of pages
+        pages = []
         # iterate routes
         for route, callback in self.routes.items():
             # callback could be a page
@@ -199,26 +231,33 @@ class Noise(object):
             for hook in self.hooks:
                 # pass data to hook
                 hook.render(route, page)
+            # append page to list
+            pages.append(page)
+        # iterate local files
+        for file_name in self.files:
+            # determine file path
+            file_path = self._bpath(file_name)
+            # continue if file exists
+            if os.path.exists(file_path): continue
+            # determine parent directory
+            parent_path = os.path.dirname(file_path)
+            # create parent directory if needed
+            if not os.path.exists(parent_path):
+                os.makedirs(parent_path)
+            # touch file
+            open(file_path, 'a').close()
+        # iterate list of pages
+        for page in pages:
             # render page
             page.render()
         # perform post-render
         self._postrender()
 
     def _postrender(self):
-        # iterate build files
-        for root, dirs, files in os.walk(self.build_path):
-            # iterate build hooks
-            for hook in self.hooks:
-                # pass data to hook
-                hook.postrender(root, dirs, files)
-        # perform completion
-        self._complete()
-
-    def _complete(self):
         # iterate build hooks
         for hook in self.hooks:
-            # call hook
-            hook.complete()
+            # pass data to hook
+            hook.postrender()
 
 
 def main():

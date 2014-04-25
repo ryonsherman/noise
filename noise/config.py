@@ -1,5 +1,5 @@
 #!/usr/bin/env python2
-
+import json
 
 class Config(dict):
     def __init__(self, path, config={}):
