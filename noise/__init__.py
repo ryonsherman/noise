@@ -24,10 +24,10 @@ class Noise(object):
         self.static_path   = self._lpath('static')
         self.template_path = self._lpath('template')
         self.build_path    = self._lpath('build')
-        # set build hooks
-        self.hooks = [autoindex(self), sitemap(self)] if hooks else []
         # set ignored files
         self.ignored = ignored
+        # set build hooks
+        self.hooks = [autoindex(self), sitemap(self)] if hooks else []
         # initialize template engine
         self.jinja = jinja2.Environment(loader=jinja2.FileSystemLoader(self.template_path))
 
@@ -156,7 +156,7 @@ class Noise(object):
 
     def init(self, config=None):
         # determine project init path
-        init_path = self.__localpath('__init__.py')
+        init_path = self._lpath('__init__.py')
         # create project directory if needed
         if not os.path.exists(self.project_path):
             os.makedirs(self.project_path)
