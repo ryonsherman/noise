@@ -32,8 +32,6 @@ class Noise(object):
         self.jinja = jinja2.Environment(loader=jinja2.FileSystemLoader(self.template_path))
 
     def __format_config(self, config):
-        # remove trailing forward-slash from base url
-        config['base'] = '/' if 'base' not in config else config['base'].rstrip('/') + '/'
         # return modified config
         return config
 

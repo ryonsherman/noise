@@ -1,8 +1,6 @@
 #!/usr/bin/env python2
 
-BOILERPLATE_CONFIG = {
-    'base': ''
-}
+BOILERPLATE_CONFIG = {}
 
 BOILERPLATE_INIT = \
 """
@@ -25,20 +23,19 @@ BOILERPLATE_TEMPLATE = \
   <head>
     <meta charset="utf-8">
     <title>{{ title }}</title>
-    <base href="{{ config['base'] }}"/>
   </head>
   <body bgcolor="white">
     <h1>{{ title }}</h1>
     <hr>
     <pre>
-<a href="{{ index['.']['pwd'].lstrip('/') }}">./</a>
+<a href="/{{ index['.']['pwd'].lstrip('/') }}">./</a>
 {% if index.get('..', False) -%}
-<a href="{{ index['..']['pwd'].lstrip('/') }}">../</a>
+<a href="/{{ index['..']['pwd'].lstrip('/') }}">../</a>
 {% else -%}
-<a href="{{ index['.']['pwd'].lstrip('/') }}">../</a>
+<a href="/{{ index['.']['pwd'].lstrip('/') }}">../</a>
 {% endif -%}
 {% for fname in index['.']['dir'] -%}
-<a href="{{ index['.']['pwd'].lstrip('/') + fname }}">{{ fname }}</a>
+<a href="/{{ index['.']['pwd'].lstrip('/') + fname }}">{{ fname }}</a>
 {{- index['.']['mtime'][fname].rjust(100 - fname|length) }}
 {% endfor -%}
     </pre>

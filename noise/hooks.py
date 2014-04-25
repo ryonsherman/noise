@@ -114,7 +114,7 @@ class sitemap(RenderedFileHook):
                 timestamp = self.app._get_file_mtime(file_path, '%Y-%m-%d')
 
                 # append element to xml
-                ElementTree.SubElement(self.xml, 'loc').text        = self.app.config['base'] + file_path
+                ElementTree.SubElement(self.xml, 'loc').text        = file_path
                 ElementTree.SubElement(self.xml, 'lastmod').text    = timestamp
                 ElementTree.SubElement(self.xml, 'changefreq').text = 'monthly'
                 ElementTree.SubElement(self.xml, 'priority').text   = str(priority)
