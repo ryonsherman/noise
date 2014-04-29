@@ -46,8 +46,10 @@ class Page(object):
             index = [f + '/' for f in sorted(dirs)] + sorted(files)
             # iterate index of files
             for file_name in index:
+                # determine file path
+                file_path = os.path.join(root, file_name)
                 # set mtime for file
-                mtime[file_name] = self.app._get_file_mtime(file_name, '%Y-%m-%d %H:%M:%S UTC')
+                mtime[file_name] = self.app._get_file_mtime(file_path, '%Y-%m-%d %H:%M:%S UTC')
             # return dict of path, index, and mtimes
             return {'pwd': root_path, 'dir': index, 'mtime': mtime, 'fsize': {}}
 

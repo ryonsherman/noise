@@ -69,6 +69,8 @@ class Noise(object):
         return os.path.join(self.template_path, path)
 
     def _fpath(self, path):
+        # ensure relative build path
+        path = self._rpath(self._bpath(path))
         # determine static path
         spath = self._spath(path)
         # return static path if exists
