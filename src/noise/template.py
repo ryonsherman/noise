@@ -7,6 +7,22 @@ __license__   = "MIT"
 
 import jinja2
 
+from jinja2.exceptions import TemplateNotFound
+
+BOILERPLATE = \
+"""
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+  </head>
+  <body>
+    {{ body }}
+  </body>
+</html>
+""".strip()
+
 
 class NoiseTemplateHelper(object):
     def __init__(self, app):
@@ -16,3 +32,13 @@ class NoiseTemplateHelper(object):
         self.env.globals.update({
             'app': app
         })
+
+    def render(self, template, **data):
+        # attempt to load template from file
+        try:
+            template = self.env.get_template(template)
+        # fall back to loading template from string
+        except TemplateNotFound:
+            template = self.env.from_string(template)
+        # return rendered template
+        return template.render(**data)

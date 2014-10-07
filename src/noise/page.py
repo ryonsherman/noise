@@ -7,21 +7,7 @@ __license__   = "MIT"
 
 import os
 
-from jinja2.exceptions import TemplateNotFound
-
-BOILERPLATE = \
-"""
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8">
-    <title>{{ title }}</title>
-  </head>
-  <body>
-    {{ body }}
-  </body>
-</html>
-""".strip()
+from noise.template import TemplateNotFound
 
 
 class NoisePage(object):
@@ -51,9 +37,11 @@ class NoisePage(object):
             template_path = self.app.path.template(template_name)
             # retrieve template if possible
             if os.path.exists(template_path):
-                template = self.app.template.env.get_template(template_name)
+                template = self.app.template.render(template_name, **self.data)
             # use boilerplate template by default
-            else: template = self.app.template.env.from_string(BOILERPLATE)
+            else: 
+                from noise.template import BOILERPLATE
+                template = self.app.template.render(BOILERPLATE, **self.data)
         # use direct path
         else:
             template_name = self.template
@@ -65,8 +53,8 @@ class NoisePage(object):
             with open(template_path, 'r') as f:
                 template = f.read()
             # load template
-            template = self.app.template.env.from_string(template)
+            template = self.app.template.render(template, **self.data)
 
         # write page to file
         with open(self.path, 'w') as f:
-            f.write(template.render(**self.data))
+            f.write(template)
