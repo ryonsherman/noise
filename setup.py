@@ -26,7 +26,7 @@ setup(
         #'noise.util'
     ],
     package_dir={'noise': 'src/noise'},
-    install_requires=['jinja2'],
+    install_requires=['jinja2', 'markdown'],
     entry_points={'console_scripts': [
         'noise = noise:main'
     ]},
