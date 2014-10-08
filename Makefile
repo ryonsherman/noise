@@ -1,5 +1,7 @@
 install:
 	python2 setup.py install
+dep:
+	pip2 install jinja2 markdown
 dev:
 	#
 	# Creating virtual development environment
