@@ -18,18 +18,16 @@ setup(
     version=VERSION,
     author="Ryon Sherman", 
     author_email="ryon.sherman@gmail.com",
-    #url="",
+    url="https://github.com/ryonsherman/noise",
     description="A static website generator",
-    #long_description="{}\n{}".format(README, CHANGELOG),
+    long_description=open('README.rst').read(),
     packages=[
         'noise', 
-        #'noise.util'
     ],
     package_dir={'noise': 'src/noise'},
     install_requires=['jinja2', 'markdown'],
     entry_points={'console_scripts': [
         'noise = noise:main'
     ]},
-    #classifiers=[],
     #test_suite="noise.tests"
 )
