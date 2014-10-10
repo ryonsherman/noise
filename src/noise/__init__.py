@@ -14,8 +14,10 @@ import noise.util as util
 
 from noise.page     import NoisePage
 from noise.path     import NoisePathHelper
+from noise.route    import NoiseRouteHelper
 from noise.config   import NoiseConfigHelper
 from noise.template import NoiseTemplateHelper
+
 
 VERSION = __version__
 BOILERPLATE = \
@@ -43,30 +45,19 @@ class Noise(object):
 
         # initialize helpers
         self.path     = NoisePathHelper(path)
+        self.route    = NoiseRouteHelper(self)
         self.config   = NoiseConfigHelper(self)
         self.template = NoiseTemplateHelper(self)
 
-        # set hooks if passed else default
+        # set hooks if passed or use default
         self.hooks  = kwargs.get('hooks', [])
         # set routes if passed or use default
-        self.routes = kwargs.get('routes', {})
+        self.routes = self.route(kwargs.get('routes', {}))
 
-    def route(self, route):
-        # wrapper to add routes by decorator
-        def decorator(callback):
-            self.add_route(route, callback)
-            return callback
-        return decorator
-    
-    def add_route(self, route, callback):
-        # format route
-        route = util.format_route(route)
-        # append route (overwriting is intentional)
-        self.routes[route] = callback
-
-    def del_route(self, route):
-        # delete route from routes
-        if route in self.routes: del self.route[route]
+        # set included files if passed else default
+        self.files   = kwargs.get('files', [])
+        # set ignored patterns if passed else default
+        self.ignored = kwargs.get('ignored', ['.*'])
 
     def init(self, config=None):
         # initialize paths
@@ -116,7 +107,7 @@ class Noise(object):
         # render pages
         for page in pages:
             # render page
-            page.render()
+            page.render(self.hooks)
         # perform postrender hooks
         for hook in self.hooks:
             hook.postrender(pages)

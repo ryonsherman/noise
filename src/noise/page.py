@@ -14,6 +14,8 @@ class NoisePage(object):
     def __init__(self, app, route, **kwargs):
         # set app instance
         self.app = app
+        # set rendered page container
+        self.rendered = False
         
         # set page route
         self.route = route
@@ -25,7 +27,7 @@ class NoisePage(object):
         # set template if passed or use default
         self.template = kwargs.get('template', '')
 
-    def render(self):
+    def render(self, hooks=None):
         # return if template is None; this disables rendering
         if self.template is None: return
 
@@ -37,11 +39,11 @@ class NoisePage(object):
             template_path = self.app.path.template(template_name)
             # retrieve template if possible
             if os.path.exists(template_path):
-                template = self.app.template.render(template_name, **self.data)
+                self.rendered = self.app.template.render(template_name, **self.data)
             # use boilerplate template by default
             else: 
                 from noise.template import BOILERPLATE
-                template = self.app.template.render(BOILERPLATE, **self.data)
+                self.rendered = self.app.template.render(BOILERPLATE, **self.data)
         # use direct path
         else:
             template_name = self.template
@@ -53,8 +55,15 @@ class NoisePage(object):
             with open(template_path, 'r') as f:
                 template = f.read()
             # load template
-            template = self.app.template.render(template, **self.data)
+            self.rendered = self.app.template.render(template, **self.data)
+
+        # perform render hooks
+        for hook in hooks or []:
+            hook.render(self)
 
         # write page to file
         with open(self.path, 'w') as f:
-            f.write(template)
+            f.write(self.rendered)
+
+        # return rendered page
+        return self.rendered
