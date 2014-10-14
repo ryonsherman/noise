@@ -18,24 +18,7 @@ from noise.route    import NoiseRouteHelper
 from noise.config   import NoiseConfigHelper
 from noise.template import NoiseTemplateHelper
 
-
 VERSION = __version__
-BOILERPLATE = \
-"""
-#!/usr/bin/env python2
-from noise import Noise
-
-app = Noise(__name__)
-
-@app.route('/')
-def index(page):
-    # set some template variables
-    page.data.update({
-        'title': "Noise: Make Some!",
-        'body':  "Hello World"
-    })
-
-""".lstrip()
 
 
 class Noise(object):
@@ -66,6 +49,7 @@ class Noise(object):
         # create project init file if needed
         path = self.path.local('__init__.py')
         if not os.path.exists(path):
+            from route import BOILERPLATE
             with open(path, 'w') as f: f.write(BOILERPLATE)
 
         # create project config file if needed
