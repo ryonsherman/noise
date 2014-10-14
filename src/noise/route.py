@@ -31,10 +31,6 @@ class NoiseRouteHelper(dict):
         self.app = app
 
     def __call__(self, route):
-        # update routes if passed
-        if type(route) is dict:
-            dict.update(route)
-            return self
         # wrapper to add routes by decorator
         def decorator(callback):
             self.__setitem__(route, callback)
@@ -46,3 +42,9 @@ class NoiseRouteHelper(dict):
         route = util.format_route(route)
         # append route (overwriting is intentional)
         dict.__setitem__(self, route, callback)
+
+    def load(self, routes):
+        # update dict with passed routes
+        dict.update(routes)
+        # return dict
+        return self

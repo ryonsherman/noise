@@ -35,7 +35,7 @@ class Noise(object):
         # set hooks if passed or use default
         self.hooks  = kwargs.get('hooks', [])
         # set routes if passed or use default
-        self.routes = self.route(kwargs.get('routes', {}))
+        self.routes = self.route.load(kwargs.get('routes', {}))
 
         # set included files if passed else default
         self.files   = kwargs.get('files', [])
