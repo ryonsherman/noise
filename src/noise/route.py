@@ -5,7 +5,7 @@ __email__     = "ryon.sherman@gmail.com"
 __copyright__ = "Copyright 2014, Ryon Sherman"
 __license__   = "MIT"
 
-from noise import util
+import os
 
 BOILERPLATE = \
 """
@@ -24,6 +24,19 @@ def index(page):
 
 """.lstrip()
 
+def format_route(route):
+    # prepend forward-slash if none
+    if not route.startswith('/'):
+        route = '/' + route
+    # append index if trailing forward-slash
+    if route.endswith('/'):
+        route += "index"
+    # append file extension if none
+    if not os.path.splitext(route)[1]:
+        route += ".html"
+    # return formatted route
+    return route
+
 
 class NoiseRouteHelper(dict):
     def __init__(self, app):
@@ -39,7 +52,7 @@ class NoiseRouteHelper(dict):
 
     def __setitem__(self, route, callback):
         # format route
-        route = util.format_route(route)
+        route = format_route(route)
         # append route (overwriting is intentional)
         dict.__setitem__(self, route, callback)
 
