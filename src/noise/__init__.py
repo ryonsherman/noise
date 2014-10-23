@@ -10,10 +10,9 @@ import os
 import sys
 import shutil
 
-import noise.util as util
-
 from noise.page     import NoisePage
 from noise.path     import NoisePathHelper
+from noise.file     import NoiseFileHelper
 from noise.route    import NoiseRouteHelper
 from noise.config   import NoiseConfigHelper
 from noise.template import NoiseTemplateHelper
@@ -28,19 +27,23 @@ class Noise(object):
 
         # initialize helpers
         self.path     = NoisePathHelper(path)
+        self.file     = NoiseFileHelper(self)
         self.route    = NoiseRouteHelper(self)
         self.config   = NoiseConfigHelper(self)
         self.template = NoiseTemplateHelper(self)
 
         # set hooks if passed or use default
         self.hooks  = kwargs.get('hooks', [])
-        # set routes if passed or use default
-        self.routes = self.route.load(kwargs.get('routes', {}))
-
-        # set included files if passed else default
-        self.files   = kwargs.get('files', [])
-        # set ignored patterns if passed else default
-        self.ignored = kwargs.get('ignored', ['.*'])
+        # load app routes
+        self.routes = self.route.load(
+            # set routes if passed or use default
+            kwargs.get('routes', {}))
+        # load app files
+        self.files  = self.file.load(
+            # set included files if passed or use default
+            kwargs.get('files', {}),
+            # set ignored patterns if passed or use default
+            kwargs.get('ignored', ['.*']))
 
     def init(self, config=None):
         # initialize paths
@@ -70,6 +73,8 @@ class Noise(object):
             shutil.copytree(static_path, build_path)
         # create build directory
         else: os.mkdir(build_path)
+
+        print "DEBUG: ", self.files
 
         # initialize list of pages
         pages = []
