@@ -19,7 +19,7 @@ class NoisePath(object):
         self.path = path
 
         # relative path helper
-        class relative(object):
+        class relpath(object):
             path = self.path
             def __str__(self):
                 return '/'
@@ -27,14 +27,14 @@ class NoisePath(object):
             def __call__(self, path):
                 return '/' + os.path.relpath(str(path), str(self.path))
         # set relative path
-        self.relative = relative()
+        self.relative = relpath()
 
     def __str__(self):
         # return path string
         return str(self.path)
 
     def __call__(self, path):
-        # return joined path when called
+        # return joined path
         return os.path.join(str(self.path), str(path).lstrip('/'))
 
 
