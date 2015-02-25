@@ -24,11 +24,18 @@ BOILERPLATE = """
 </html>
 """.strip()
 
+md = markdown.Markdown(extensions=[
+    'toc',
+    'abbr',
+    'tables',
+    'fenced_code'
+])
+
 def markdown_filter(text):
     # attempt to read text from file
     if os.path.exists(text):
         with open(text, 'r') as f:
-            data = f.read()
+            text = f.read()
     # return converted markdown
     return md.convert(text).strip()
 
