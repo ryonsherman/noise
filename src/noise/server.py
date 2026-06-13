@@ -23,9 +23,9 @@ LIVERELOAD_SCRIPT = """
 
 
 class DevServer:
-    def __init__(self, build_path, source_paths, rebuild):
+    def __init__(self, build_path, source_root, rebuild):
         self.build_path = build_path
-        self.source_paths = source_paths
+        self.source_root = source_root
         self.rebuild = rebuild
         self._version = 0
         self._listeners = []
@@ -48,20 +48,21 @@ class DevServer:
 
     def _watch(self):
         mtimes = {}
-        for p in self.source_paths:
-            try:
-                mtimes[p] = os.stat(p).st_mtime
-            except OSError:
-                pass
         while True:
             time.sleep(1)
             changed = False
-            for p in self.source_paths:
+            paths = []
+            for root, dirs, files in os.walk(str(self.source_root)):
+                dirs[:] = [d for d in dirs if d not in ('build', '.git', '__pycache__', '.gradle')]
+                for f in files:
+                    paths.append(os.path.join(root, f))
+            for p in paths:
                 try:
                     mtime = os.stat(p).st_mtime
                 except OSError:
                     continue
-                if mtime != mtimes.get(p):
+                prev = mtimes.get(p)
+                if prev is None or mtime != prev:
                     mtimes[p] = mtime
                     changed = True
             if changed:

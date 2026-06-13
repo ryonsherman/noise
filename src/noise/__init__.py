@@ -108,11 +108,7 @@ def main():
         app = module.app
         app.build()
         from noise.server import DevServer
-        source_paths = []
-        for root, dirs, files in os.walk(str(app.path)):
-            for f in files:
-                source_paths.append(os.path.join(root, f))
-        server = DevServer(str(app.path.build), source_paths, app.build)
+        server = DevServer(str(app.path.build), app.path, app.build)
         server.start(host=args.host, port=args.port)
 
 
