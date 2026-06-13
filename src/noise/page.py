@@ -40,5 +40,6 @@ class Page(object):
 
         self.rendered = self.app.template.render(template, **self.data)
 
+        os.makedirs(os.path.dirname(self.path), exist_ok=True)
         with open(self.path, 'w') as f:
             f.write(self.rendered)
