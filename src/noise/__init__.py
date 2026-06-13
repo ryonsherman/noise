@@ -84,10 +84,14 @@ def main():
     subparsers = parser.add_subparsers(dest='action', help="action to perform")
     init_parser = subparsers.add_parser('init', help="initialize project directory")
     build_parser = subparsers.add_parser('build', help="build project")
+    serve_parser = subparsers.add_parser('serve', help="build and serve with live reload")
 
-    for p in (init_parser, build_parser):
+    for p in (init_parser, build_parser, serve_parser):
         p.add_argument('path', help="project directory path")
         p.add_argument('--verbose', action='store_true', help="enable verbose output")
+
+    serve_parser.add_argument('--host', default='127.0.0.1', help="host address (default: 127.0.0.1)")
+    serve_parser.add_argument('--port', type=int, default=8000, help="port (default: 8000)")
 
     args = parser.parse_args()
 
@@ -99,6 +103,17 @@ def main():
     elif args.action == 'build':
         module = load_project(args.path)
         module.app.build()
+    elif args.action == 'serve':
+        module = load_project(args.path)
+        app = module.app
+        app.build()
+        from noise.server import DevServer
+        source_paths = []
+        for root, dirs, files in os.walk(str(app.path)):
+            for f in files:
+                source_paths.append(os.path.join(root, f))
+        server = DevServer(str(app.path.build), source_paths, app.build)
+        server.start(host=args.host, port=args.port)
 
 
 if __name__ == '__main__':
