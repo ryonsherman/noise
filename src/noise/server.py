@@ -2,6 +2,7 @@ import logging
 import os
 import threading
 import time
+import traceback
 from functools import partial
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from io import BytesIO
@@ -27,13 +28,18 @@ class DevServer:
         self.build_path = build_path
         self.source_root = source_root
         self.rebuild = rebuild
-        self._version = 0
         self._listeners = []
         self._lock = threading.Lock()
 
     def start(self, host='127.0.0.1', port=8000):
         handler = partial(DevServerHandler, self, directory=str(self.build_path))
-        httpd = HTTPServer((host, port), handler, bind_and_activate=False)
+
+        try:
+            httpd = HTTPServer((host, port), handler, bind_and_activate=False)
+        except OSError as e:
+            log.error("Failed to bind to %s:%d — %s", host, port, e)
+            return
+
         httpd.allow_reuse_address = True
         httpd.server_bind()
         httpd.server_activate()
@@ -44,7 +50,11 @@ class DevServer:
         addr = httpd.server_address
         log.info("Serving at http://%s:%d", addr[0], addr[1])
         log.info("Watching for changes...")
-        httpd.serve_forever()
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            log.info("Shutting down...")
+            httpd.shutdown()
 
     def _watch(self):
         mtimes = {}
@@ -52,10 +62,14 @@ class DevServer:
             time.sleep(1)
             changed = False
             paths = []
-            for root, dirs, files in os.walk(str(self.source_root)):
-                dirs[:] = [d for d in dirs if d not in ('build', '.git', '__pycache__', '.gradle')]
-                for f in files:
-                    paths.append(os.path.join(root, f))
+            try:
+                for root, dirs, files in os.walk(str(self.source_root)):
+                    dirs[:] = [d for d in dirs if d not in ('build', '.git', '__pycache__', '.gradle')]
+                    for f in files:
+                        paths.append(os.path.join(root, f))
+            except OSError as e:
+                log.error("Watch error walking source tree: %s", e)
+                continue
             for p in paths:
                 try:
                     mtime = os.stat(p).st_mtime
@@ -67,12 +81,21 @@ class DevServer:
                     changed = True
             if changed:
                 log.info("Source change detected, rebuilding...")
-                self.rebuild()
+                try:
+                    self.rebuild()
+                    log.info("Build complete, reloading browsers")
+                except Exception as e:
+                    log.error("Rebuild failed: %s", e)
+                    for line in traceback.format_exc().splitlines():
+                        log.error("  %s", line)
+                    continue
                 with self._lock:
-                    self._version += 1
                     for q in self._listeners:
-                        q.put_nowait(('reload',))
-                        self._listeners.remove(q)
+                        try:
+                            q.put_nowait(None)
+                        except Exception:
+                            pass
+                    self._listeners.clear()
 
     def add_listener(self, q):
         with self._lock:
@@ -107,7 +130,7 @@ class DevServerHandler(SimpleHTTPRequestHandler):
         try:
             while True:
                 msg = q.get()
-                if msg[0] == 'reload':
+                if msg is None:
                     self.wfile.write(b'data: reload\n\n')
                     self.wfile.flush()
                     break
@@ -122,8 +145,13 @@ class DevServerHandler(SimpleHTTPRequestHandler):
             return super().send_head()
         ctype = self.guess_type(path)
         if ctype == 'text/html':
-            with open(path, 'rb') as f:
-                content = f.read()
+            try:
+                with open(path, 'rb') as f:
+                    content = f.read()
+            except OSError as e:
+                log.error("Error reading %s: %s", path, e)
+                self.send_error(404, "Not found")
+                return None
             injection = LIVERELOAD_SCRIPT.encode()
             content = content.replace(b'</body>', injection + b'</body>')
             f = BytesIO()
@@ -139,3 +167,6 @@ class DevServerHandler(SimpleHTTPRequestHandler):
 
     def log_message(self, fmt, *args):
         log.info(fmt, *args)
+
+    def log_error(self, fmt, *args):
+        log.error(fmt, *args)
