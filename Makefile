@@ -1,52 +1,24 @@
 install:
-	python2 setup.py install
+	pip3 install -e .
+
 uninstall:
-	echo "TODO: Uninstall"
+	pip3 uninstall noise -y
+
 dep:
-	#
-	# Installing dependencies
-	#
-	pip2 install jinja2 markdown
-	#
-	if [ -e `which xsel` ]; then \
-		echo 'make install' | xsel --clipboard --input; \
-	fi
-	#
-	# If the 'xsel' binary exists the previous text was copied to the clipboard for your convenience.
-	#
+	pip3 install jinja2 markdown
+
 dev:
-	#
-	# Creating virtual development environment
-	#
-	virtualenv2 dev
-	#
-	# NOTICE!
-	#
-	# You must manually execute 'source dev/bin/activate' to enable the virtual environment.
-	#   Type 'deactivate' once complete.
-	#
-	# To provide dependencies type 'make dep'.
-	#   To install, type 'make', 'make install', or 'python2 setup.py install' to package the module.
-	#
-	if [ -e `which xsel` ]; then \
-		echo 'source dev/bin/activate; make dep' | xsel --clipboard --input; \
-	fi
-	#
-	# If the 'xsel' binary exists the previous text was copied to the clipboard for your convenience.
-	#
+	python3 -m venv dev
+	@echo ""
+	@echo "Run 'source dev/bin/activate' to enable the virtual environment."
+	@echo "Run 'deactivate' once complete."
+	@echo ""
+	@echo "To install dependencies, run 'make dep'."
+	@echo "To install, run 'make install' or 'pip3 install -e .'"
+
 clean:
-	#
-	# Removing virtual development environment and setup files.
-	#
-	rm -rf dev build dist *.egg-info *.log
-	#
-	# NOTICE!
-	#
-	# You must manually execute 'deactivate' to disable the virtual environment.
-	#
-	if [ -e `which xsel` ]; then \
-		echo 'deactivate' | xsel --clipboard --input; \
-	fi
-	#
-	# If the 'xsel' binary exists the previous text was copied to the clipboard for your convenience.
-	#
+	rm -rf dev build dist *.egg-info __pycache__ .pytest_cache
+	rm -rf src/noise/__pycache__
+
+test:
+	python3 -m pytest tests/ -v
