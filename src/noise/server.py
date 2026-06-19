@@ -110,7 +110,10 @@ class DevServer:
 class DevServerHandler(SimpleHTTPRequestHandler):
     def __init__(self, server, *args, **kwargs):
         self._dev_server = server
-        super().__init__(*args, **kwargs)
+        try:
+            super().__init__(*args, **kwargs)
+        except ConnectionResetError:
+            pass
 
     def do_GET(self):
         if self.path == '/__noise_reload':

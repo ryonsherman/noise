@@ -108,7 +108,12 @@ def main():
         app = module.app
         app.build()
         from noise.server import DevServer
-        server = DevServer(str(app.path.build), app.path, app.build)
+        def rebuild():
+            nonlocal app
+            module = load_project(args.path)
+            app = module.app
+            app.build()
+        server = DevServer(str(app.path.build), app.path, rebuild)
         server.start(host=args.host, port=args.port)
 
 
